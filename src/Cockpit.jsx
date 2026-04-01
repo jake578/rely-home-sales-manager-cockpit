@@ -53,6 +53,23 @@ function PriorityDot({ priority }) {
   return <span style={{ width: 6, height: 6, borderRadius: "50%", background: c[priority] || c.low, display: "inline-block", flexShrink: 0 }} />;
 }
 
+// Derive initials from name if not provided
+const initials = REP.initials || REP.avatar || REP.name.split(" ").map(n => n[0]).join("").slice(0, 2);
+const quota = REP.quota || 1000000;
+const pipeline = REP.pipeline || 0;
+const meetingsBooked = REP.meetingsBooked || REP.meetings_booked || 14;
+const meetingsTarget = REP.meetingsTarget || REP.meetings_target || 20;
+const emailReplyRate = REP.emailReplyRate || REP.reply_rate || 15.2;
+const teamAvgReply = REP.teamAvgReply || REP.team_avg_reply || 12.0;
+const replyToMeeting = REP.replyToMeeting || REP.reply_to_meeting || 34;
+const teamAvgMeeting = REP.teamAvgMeeting || REP.team_avg_meeting || 28;
+const activitiesWeek = REP.activitiesWeek || REP.activities_week || 142;
+const emailAct = REP.emailAct || REP.email_act || 78;
+const callAct = REP.callAct || REP.call_act || 42;
+const liAct = REP.liAct || REP.li_act || 22;
+const repWeek = REP.week || REP.period || "Q2 2026";
+const fmtSize = (v) => typeof v === "number" ? (v >= 1000000 ? "$" + (v / 1000000).toFixed(1) + "M" : "$" + (v / 1000).toFixed(0) + "K") : String(v);
+
 export default function Cockpit() {
   const [activeTab, setActiveTab] = useState(TABS[0]);
   const [editingId, setEditingId] = useState(null);
@@ -61,7 +78,7 @@ export default function Cockpit() {
   const [skippedIds, setSkippedIds] = useState(new Set());
   const [chatInput, setChatInput] = useState("");
   const [chatMsgs, setChatMsgs] = useState([
-    { from: "claude", text: `Good morning, ${REP.name.split(" ")[0]}. You're **${Math.round((REP.pipeline / REP.quota) * 1000) / 10}% to quota** with ${REP.week}.` },
+    { from: "claude", text: `Good morning, ${REP.name.split(" ")[0]}. You're **${Math.round((pipeline / quota) * 1000) / 10}% to target** — ${repWeek}.` },
     { from: "claude", text: `You have actions queued across ${TABS.length} categories. Let me know what you'd like to focus on.` },
   ]);
   const [chatLoading, setChatLoading] = useState(false);
@@ -73,8 +90,8 @@ export default function Cockpit() {
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [chatMsgs, chatLoading]);
 
-  const pctQuota = Math.round((REP.pipeline / REP.quota) * 1000) / 10;
-  const remaining = REP.quota - REP.pipeline;
+  const pctQuota = Math.round((pipeline / quota) * 1000) / 10;
+  const remaining = quota - pipeline;
 
   const allLeads = Object.values(ALL_LEADS).flat();
   const leads = (ALL_LEADS[activeTab] || []).filter(l => showSent || (!sentIds.has(l.id) && !skippedIds.has(l.id)));
@@ -116,8 +133,6 @@ export default function Cockpit() {
   const sl = selectedLead ? allLeads.find(l => l.id === selectedLead) : null;
   const slMsg = sl ? (editedMessages[sl.id] || sl.message) : "";
 
-  const fmtK = (n) => "$" + (n / 1000).toFixed(0) + "K";
-
   return (
     <div style={{ fontFamily: "'Inter', system-ui, -apple-system, sans-serif", background: "#FAFAF8", minHeight: "100vh" }}>
       {/* Top nav */}
@@ -137,7 +152,7 @@ export default function Cockpit() {
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
           <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 20, background: "#E1F5EE", color: "#0F6E56", fontWeight: 500 }}>{totalActions} actions</span>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#E6F1FB", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 600, fontSize: 11, color: "#185FA5" }}>{REP.initials}</div>
+            <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#E6F1FB", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 600, fontSize: 11, color: "#185FA5" }}>{initials}</div>
             <span style={{ fontSize: 13, fontWeight: 500 }}>{REP.name}</span>
           </div>
         </div>
@@ -152,37 +167,37 @@ export default function Cockpit() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
                 <div>
                   <p style={{ fontSize: 11, color: "#888", margin: 0, textTransform: "uppercase", letterSpacing: 0.5 }}>Pipeline</p>
-                  <p style={{ fontSize: 26, fontWeight: 600, margin: "4px 0 0", letterSpacing: -0.5 }}>{fmtK(REP.pipeline)}</p>
+                  <p style={{ fontSize: 26, fontWeight: 600, margin: "4px 0 0", letterSpacing: -0.5 }}>{fmtSize(pipeline)}</p>
                 </div>
-                <span style={{ fontSize: 11, color: "#BA7517", fontWeight: 500 }}>{fmtK(remaining)} left</span>
+                <span style={{ fontSize: 11, color: "#BA7517", fontWeight: 500 }}>{fmtSize(remaining)} left</span>
               </div>
               <div style={{ height: 4, borderRadius: 2, background: "#f0efe9", marginTop: 10, overflow: "hidden" }}>
                 <div style={{ height: "100%", borderRadius: 2, background: "#1D9E75", width: `${Math.min(pctQuota, 100)}%` }} />
               </div>
-              <p style={{ fontSize: 10, color: "#888", margin: "4px 0 0", textAlign: "right" }}>{pctQuota}% of {fmtK(REP.quota)}</p>
+              <p style={{ fontSize: 10, color: "#888", margin: "4px 0 0", textAlign: "right" }}>{pctQuota}% of {fmtSize(quota)}</p>
             </div>
             <div style={{ background: "#fff", borderRadius: 10, padding: "14px 16px", border: "1px solid #eee" }}>
               <p style={{ fontSize: 11, color: "#888", margin: 0, textTransform: "uppercase", letterSpacing: 0.5 }}>Meetings</p>
-              <p style={{ fontSize: 26, fontWeight: 600, margin: "4px 0 0", letterSpacing: -0.5 }}>{REP.meetingsBooked}<span style={{ fontSize: 14, fontWeight: 400, color: "#888" }}>/{REP.meetingsTarget}</span></p>
-              <p style={{ fontSize: 11, color: "#BA7517", margin: "6px 0 0" }}>{REP.meetingsTarget - REP.meetingsBooked} more needed</p>
+              <p style={{ fontSize: 26, fontWeight: 600, margin: "4px 0 0", letterSpacing: -0.5 }}>{meetingsBooked}<span style={{ fontSize: 14, fontWeight: 400, color: "#888" }}>/{meetingsTarget}</span></p>
+              <p style={{ fontSize: 11, color: "#BA7517", margin: "6px 0 0" }}>{meetingsTarget - meetingsBooked} more needed</p>
             </div>
             <div style={{ background: "#fff", borderRadius: 10, padding: "14px 16px", border: "1px solid #eee" }}>
               <p style={{ fontSize: 11, color: "#888", margin: 0, textTransform: "uppercase", letterSpacing: 0.5 }}>Reply rate</p>
-              <p style={{ fontSize: 26, fontWeight: 600, margin: "4px 0 0", letterSpacing: -0.5 }}>{REP.emailReplyRate}%</p>
-              <p style={{ fontSize: 11, color: "#0F6E56", margin: "6px 0 0" }}>+{(REP.emailReplyRate - REP.teamAvgReply).toFixed(1)}pp vs team</p>
+              <p style={{ fontSize: 26, fontWeight: 600, margin: "4px 0 0", letterSpacing: -0.5 }}>{emailReplyRate}%</p>
+              <p style={{ fontSize: 11, color: "#0F6E56", margin: "6px 0 0" }}>+{(emailReplyRate - teamAvgReply).toFixed(1)}pp vs team</p>
             </div>
             <div style={{ background: "#fff", borderRadius: 10, padding: "14px 16px", border: "1px solid #eee" }}>
               <p style={{ fontSize: 11, color: "#888", margin: 0, textTransform: "uppercase", letterSpacing: 0.5 }}>Reply to mtg</p>
-              <p style={{ fontSize: 26, fontWeight: 600, margin: "4px 0 0", letterSpacing: -0.5 }}>{REP.replyToMeeting}%</p>
-              <p style={{ fontSize: 11, color: "#888", margin: "6px 0 0" }}>team avg {REP.teamAvgMeeting}%</p>
+              <p style={{ fontSize: 26, fontWeight: 600, margin: "4px 0 0", letterSpacing: -0.5 }}>{replyToMeeting}%</p>
+              <p style={{ fontSize: 11, color: "#888", margin: "6px 0 0" }}>team avg {teamAvgMeeting}%</p>
             </div>
             <div style={{ background: "#fff", borderRadius: 10, padding: "14px 16px", border: "1px solid #eee" }}>
               <p style={{ fontSize: 11, color: "#888", margin: 0, textTransform: "uppercase", letterSpacing: 0.5 }}>This week</p>
-              <p style={{ fontSize: 26, fontWeight: 600, margin: "4px 0 0", letterSpacing: -0.5 }}>{REP.activitiesWeek}</p>
+              <p style={{ fontSize: 26, fontWeight: 600, margin: "4px 0 0", letterSpacing: -0.5 }}>{activitiesWeek}</p>
               <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-                <span style={{ fontSize: 10, color: "#85B7EB" }}>{REP.emailAct} email</span>
-                <span style={{ fontSize: 10, color: "#AFA9EC" }}>{REP.callAct} call</span>
-                <span style={{ fontSize: 10, color: "#5DCAA5" }}>{REP.liAct} LI</span>
+                <span style={{ fontSize: 10, color: "#85B7EB" }}>{emailAct} email</span>
+                <span style={{ fontSize: 10, color: "#AFA9EC" }}>{callAct} call</span>
+                <span style={{ fontSize: 10, color: "#5DCAA5" }}>{liAct} LI</span>
               </div>
             </div>
           </div>
@@ -292,7 +307,7 @@ export default function Cockpit() {
                     <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
                       <span style={{ fontSize: 11, padding: "3px 8px", borderRadius: 5, background: "#f0efe9", color: "#555" }}>{sl.company}</span>
                       <span style={{ fontSize: 11, padding: "3px 8px", borderRadius: 5, background: "#f0efe9", color: "#555" }}>{sl.stage}</span>
-                      <span style={{ fontSize: 11, padding: "3px 8px", borderRadius: 5, background: "#f0efe9", color: "#555" }}>{sl.size}</span>
+                      <span style={{ fontSize: 11, padding: "3px 8px", borderRadius: 5, background: "#f0efe9", color: "#555" }}>{fmtSize(sl.size)}</span>
                     </div>
 
                     <p style={{ fontSize: 11, color: "#888", margin: "0 0 6px", textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 500 }}>Signals</p>
